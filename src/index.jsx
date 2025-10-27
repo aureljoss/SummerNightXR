@@ -23,7 +23,7 @@ root.render(
     >
       <XR store={store}>
         <Experience />
-        <XROrigin scale={0.24} position={[0, -0.4, 1.6]} />
+        <XROrigin scale={0.24} position={[-0.5, 0.4, 1.6]} />
       </XR>
     </Canvas>
   </>
