@@ -26,10 +26,13 @@ const PortalMaterial = shaderMaterial(
 extend({ PortalMaterial });
 
 export default function Experience() {
+
+  // Load model and textures
   const { nodes } = useGLTF("./model/Winter-portal-FINAL.glb");
   const bakedTexture = useTexture("./model/baked-final.jpg");
   bakedTexture.flipY = false;
 
+  //Sparkles setup
   const sparklesRef = useRef();
   const [sparklesParams, setSparklesParams] = useState({
     size: 8,

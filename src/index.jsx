@@ -2,6 +2,7 @@ import "./style.css";
 import ReactDOM from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
 import Experience from "./Experience.jsx";
+import XRExperience from "./XRExperience.jsx";
 import { createXRStore, XR, XROrigin } from "@react-three/xr";
 
 const store = createXRStore();
@@ -22,6 +23,7 @@ root.render(
       }}
     >
       <XR store={store}>
+        <XRExperience />
         <Experience />
         <XROrigin scale={0.24} position={[-0.5, 0.4, 1.6]} />
       </XR>
