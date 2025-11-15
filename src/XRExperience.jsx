@@ -263,7 +263,7 @@ export default function XRExperience() {
     const scale = new THREE.Vector3();
     controller.matrixWorld.decompose(pos, quat, scale);
 
-    const forward = new THREE.Vector3(0, 0, -1)
+    const forward = new THREE.Vector3(0, 0, 0)
       .applyQuaternion(quat)
       .normalize();
     const end = pos.clone().add(forward.multiplyScalar(3));
@@ -277,7 +277,7 @@ export default function XRExperience() {
   return (
     <>
       {/* Visual floor grid for debugging (faint) and a transparent plane for raycasting */}
-      <mesh
+      {/* <mesh
         ref={floorRef}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, 0]}
@@ -286,13 +286,13 @@ export default function XRExperience() {
         <planeGeometry args={[100, 100]} />
         <meshBasicMaterial color="#888" transparent opacity={0.12} />
       </mesh>
-      <gridHelper args={[100, 50, "#444", "#222"]} position={[0, 0.001, 0]} />
+      <gridHelper args={[100, 50, "#444", "#222"]} position={[0, 0.001, 0]} /> */}
 
       {/* Controller forward line helper */}
-      <line ref={controllerLineRef} visible={false}>
+      {/* <line ref={controllerLineRef} visible={false}>
         <bufferGeometry />
         <lineBasicMaterial color="yellow" />
-      </line>
+      </line> */}
       {/* Intersection marker (small red sphere) */}
       <mesh ref={markerRef} visible={false} position={[0, 0, 0]}>
         <sphereGeometry args={[0.06, 12, 12]} />

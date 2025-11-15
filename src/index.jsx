@@ -23,7 +23,7 @@ root.render(
       }}
     >
       <XR store={store}>
-        <XROrigin position={[0.4, 0, 0]}>
+        <XROrigin position={[0, 0, 0]}>
           <XRExperience />
           <Experience />
         </XROrigin>
