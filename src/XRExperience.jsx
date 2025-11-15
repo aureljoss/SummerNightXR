@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { extend, useFrame } from "@react-three/fiber";
+import { useThree, useFrame } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
 import { useGLTF, useTexture } from "@react-three/drei";
 import { useXR } from "@react-three/xr";
@@ -7,8 +7,8 @@ import { useXR } from "@react-three/xr";
 export default function XRExperience() {
   const [placedModels, setPlacedModels] = useState([]);
   const hitTestSourceRef = useRef(null);
-  const frameRef = useRef();
   const { isPresenting, session } = useXR();
+  const { gl } = useThree();
 
   // Load model and textures
   const { nodes } = useGLTF("./model/Lapinou.glb");
@@ -49,33 +49,35 @@ export default function XRExperience() {
         return;
       }
 
-      // Get the frame to access hit test results
-      if (frameRef.current) {
-        const hitTestResults = frameRef.current.getHitTestResults(
-          hitTestSourceRef.current
+      // Get the XR frame from the renderer
+      const frame = gl.xr.getFrame?.();
+      if (!frame) {
+        console.warn("XR frame not available");
+        return;
+      }
+
+      const hitTestResults = frame.getHitTestResults(hitTestSourceRef.current);
+      console.log("Hit test results:", hitTestResults.length);
+
+      if (hitTestResults.length > 0) {
+        // Get the pose of the first hit test result
+        const pose = hitTestResults[0].getPose(
+          frame.session.renderState.baseLayer.space
         );
-        console.log("Hit test results:", hitTestResults.length);
+        console.log("Hit pose:", pose);
 
-        if (hitTestResults.length > 0) {
-          // Get the pose of the first hit test result
-          const pose = hitTestResults[0].getPose(
-            frameRef.current.session.renderState.baseLayer.space
-          );
-          console.log("Hit pose:", pose);
-
-          if (pose) {
-            // Create a new model instance at the hit position
-            const newModel = {
-              id: Date.now(),
-              position: [
-                pose.transform.position.x,
-                pose.transform.position.y,
-                pose.transform.position.z,
-              ],
-            };
-            console.log("Placing model at:", newModel.position);
-            setPlacedModels((prev) => [...prev, newModel]);
-          }
+        if (pose) {
+          // Create a new model instance at the hit position
+          const newModel = {
+            id: Date.now(),
+            position: [
+              pose.transform.position.x,
+              pose.transform.position.y,
+              pose.transform.position.z,
+            ],
+          };
+          console.log("Placing model at:", newModel.position);
+          setPlacedModels((prev) => [...prev, newModel]);
         }
       }
     };
@@ -86,13 +88,7 @@ export default function XRExperience() {
     return () => {
       session.removeEventListener("select", handleSelect);
     };
-  }, [session]);
-
-  // Capture the current frame in useFrame
-  const { frame } = useFrame();
-  useEffect(() => {
-    frameRef.current = frame;
-  }, [frame]);
+  }, [session, gl]);
 
   return (
     <>
