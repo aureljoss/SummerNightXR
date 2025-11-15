@@ -13,6 +13,23 @@ export default function XRExperience() {
   const { nodes } = useGLTF("./model/Lapinou.glb");
   const bakedTexture = useTexture("./model/Lapinou.jpg");
   bakedTexture.flipY = false;
+  // Compute model geometry base offset so we place the model with its feet on the hit point
+  const modelBaseOffsetRef = useRef(0);
+  useEffect(() => {
+    try {
+      const geom = nodes?.baked?.geometry;
+      if (geom) {
+        if (!geom.boundingBox) geom.computeBoundingBox();
+        const bb = geom.boundingBox;
+        modelBaseOffsetRef.current = bb ? bb.min.y : 0;
+        // writeLog to help debugging (only if writeLog exists)
+        if (typeof writeLog === "function")
+          writeLog("Model base offset: " + modelBaseOffsetRef.current);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [nodes]);
 
   // Log XR session state for debugging (shows up in DevTools) and create overlay
   useEffect(() => {
@@ -169,11 +186,19 @@ export default function XRExperience() {
 
         if (intersects.length > 0) {
           const point = intersects[0].point;
+          // Adjust model position so its base (boundingBox.min.y) sits on the hit point
+          const y = point.y - (modelBaseOffsetRef.current || 0);
           const newModel = {
             id: Date.now(),
-            position: [point.x, point.y, point.z],
+            position: [point.x, y, point.z],
           };
-          writeLog("Placing model at floor hit: " + newModel.position);
+          writeLog(
+            "Placing model at floor hit: " +
+              newModel.position +
+              " (hit at " +
+              point.toArray() +
+              ")"
+          );
           setPlacedModels((prev) => [...prev, newModel]);
           // show marker at hit
           if (markerRef.current) {
@@ -185,15 +210,18 @@ export default function XRExperience() {
           const fallbackPos = origin
             .clone()
             .add(forward.clone().multiplyScalar(1.5));
+          const y = fallbackPos.y - (modelBaseOffsetRef.current || 0) - 0.5; // small downward adjustment
           const newModel = {
             id: Date.now(),
-            position: [
-              fallbackPos.x,
-              Math.max(fallbackPos.y - 0.5, 0),
-              fallbackPos.z,
-            ],
+            position: [fallbackPos.x, Math.max(y, 0), fallbackPos.z],
           };
-          writeLog("Fallback placing model at: " + newModel.position);
+          writeLog(
+            "Fallback placing model at: " +
+              newModel.position +
+              " (fallback origin " +
+              origin.toArray() +
+              ")"
+          );
           setPlacedModels((prev) => [...prev, newModel]);
           if (markerRef.current) {
             markerRef.current.position.set(
