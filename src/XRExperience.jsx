@@ -49,7 +49,7 @@ export default function XRExperience() {
             id: Date.now(),
             position: [
               pose.transform.position.x,
-              pose.transform.position.y - 0.5, // Adjust for floor level
+              pose.transform.position.y + 0.5, // Adjust for floor level
               pose.transform.position.z,
             ],
           };
@@ -74,10 +74,9 @@ export default function XRExperience() {
   return (
     <>
       {/* Background scene */}
-      <mesh geometry={nodes.baked.geometry} position={[0, 0, 0]}>
-        <meshBasicMaterial map={bakedTexture} />
-      </mesh>
-
+        <mesh geometry={nodes.baked.geometry} position={[0,0.4,0]}>
+          <meshBasicMaterial map={bakedTexture} />
+        </mesh>
       {/* Render each placed model */}
       {placedModels.map((model) => (
         <group key={model.id} position={model.position}>
