@@ -277,7 +277,7 @@ export default function XRExperience() {
   return (
     <>
       {/* Visual floor grid for debugging (faint) and a transparent plane for raycasting */}
-      {/* <mesh
+      <mesh
         ref={floorRef}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, 0]}
@@ -286,10 +286,10 @@ export default function XRExperience() {
         <planeGeometry args={[100, 100]} />
         <meshBasicMaterial color="#888" transparent opacity={0.12} />
       </mesh>
-      <gridHelper args={[100, 50, "#444", "#222"]} position={[0, 0.001, 0]} /> */}
+      <gridHelper args={[100, 50, "#444", "#222"]} position={[0, 0.001, 0]} />
 
       {/* Controller forward line helper */}
-      {/* <line ref={controllerLineRef} visible={false}>
+      <line ref={controllerLineRef} visible={false}>
         <bufferGeometry />
         <lineBasicMaterial color="yellow" />
       </line> */}
