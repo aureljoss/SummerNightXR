@@ -3,7 +3,13 @@ import ReactDOM from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
 import Experience from "./Experience.jsx";
 import XRExperience from "./XRExperience.jsx";
-import { createXRStore, XR, XROrigin } from "@react-three/xr";
+import {
+  createXRStore,
+  XR,
+  XROrigin,
+  Controllers,
+  TeleportationPlane,
+} from "@react-three/xr";
 
 const store = createXRStore();
 
@@ -23,9 +29,20 @@ root.render(
       }}
     >
       <XR store={store}>
+        <Controllers />
+        <TeleportationPlane
+          /** Whether to allow teleportation from left controller. Default is `false` */
+          leftHand={true}
+          /** Whether to allow teleportation from right controller. Default is `false` */
+          rightHand={false}
+          /** The maximum distance from the camera to the teleportation point. Default is `10` */
+          maxDistance={10}
+          /** The radial size of the teleportation marker. Default is `0.25` */
+          size={0.25}
+        />
         <XRExperience />
         <Experience />
-        <XROrigin scale={0.24} position={[-0.5, 0.4, 1.6]} />
+        <XROrigin position={[0.4, 0, 0]} />
       </XR>
     </Canvas>
   </>
