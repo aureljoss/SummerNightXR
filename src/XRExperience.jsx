@@ -1,37 +1,50 @@
 import * as THREE from "three";
 import { extend, useFrame } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
-import { GUI } from "lil-gui";
 import { useGLTF, useTexture } from "@react-three/drei";
 import { useXR } from "@react-three/xr";
 
 export default function XRExperience() {
-  const [red, setRed] = useState(false);
   const [placedModels, setPlacedModels] = useState([]);
-  const hitTestRef = useRef();
+  const hitTestSourceRef = useRef(null);
   const { isPresenting, session } = useXR();
 
   // Load model and textures
-  const { nodes, scene } = useGLTF("./model/Lapinou.glb");
+  const { nodes } = useGLTF("./model/Lapinou.glb");
   const bakedTexture = useTexture("./model/Lapinou.jpg");
   bakedTexture.flipY = false;
 
-  // Handle XR select (click) events
+  // Initialize hit test source when XR session starts
   useEffect(() => {
     if (!session) return;
 
-    const handleSelect = (event) => {
-      const inputSource = event.inputSource;
+    const initHitTest = async () => {
+      // Request a hit test source for screen input (controller)
+      const hitTestSource = await session.requestHitTestSource({
+        space: session.inputSpace,
+      });
+      hitTestSourceRef.current = hitTestSource;
+    };
 
-      // Perform hit test to find floor intersection
+    initHitTest().catch((err) => console.error("Hit test setup failed:", err));
+  }, [session]);
+
+  // Handle XR select (click) events
+  useEffect(() => {
+    if (!session || !hitTestSourceRef.current) return;
+
+    const handleSelect = (event) => {
+      // Get hit test results from the session
       const hitTestResults = session.requestHitTestResults(
-        inputSource,
-        hitTestRef.current
+        hitTestSourceRef.current,
+        session.renderState.baseLayer.space
       );
 
       if (hitTestResults.length > 0) {
         // Get the pose of the first hit test result (closest intersection)
-        const pose = hitTestResults[0].getPose(session.inputSpace);
+        const pose = hitTestResults[0].getPose(
+          session.renderState.baseLayer.space
+        );
 
         if (pose) {
           // Create a new model instance at the hit position
@@ -43,7 +56,7 @@ export default function XRExperience() {
               pose.transform.position.z,
             ],
           };
-          setPlacedModels([...placedModels, newModel]);
+          setPlacedModels((prev) => [...prev, newModel]);
         }
       }
     };
@@ -53,7 +66,7 @@ export default function XRExperience() {
     return () => {
       session.removeEventListener("select", handleSelect);
     };
-  }, [session, placedModels]);
+  }, [session]);
 
   return (
     <>
