@@ -7,8 +7,6 @@ import {
   createXRStore,
   XR,
   XROrigin,
-  Controllers,
-  TeleportationPlane,
 } from "@react-three/xr";
 
 const store = createXRStore();
@@ -29,17 +27,6 @@ root.render(
       }}
     >
       <XR store={store}>
-        <Controllers />
-        <TeleportationPlane
-          /** Whether to allow teleportation from left controller. Default is `false` */
-          leftHand={true}
-          /** Whether to allow teleportation from right controller. Default is `false` */
-          rightHand={false}
-          /** The maximum distance from the camera to the teleportation point. Default is `10` */
-          maxDistance={10}
-          /** The radial size of the teleportation marker. Default is `0.25` */
-          size={0.25}
-        />
         <XRExperience />
         <Experience />
         <XROrigin position={[0.4, 0, 0]} />
