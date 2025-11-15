@@ -14,68 +14,18 @@ export default function XRExperience() {
   const bakedTexture = useTexture("./model/Lapinou.jpg");
   bakedTexture.flipY = false;
 
-  // Handle XR select (click) events with simple controller pose
+  // Log XR session state for debugging (shows up in DevTools)
   useEffect(() => {
-    if (!session) return;
-
-    const handleSelect = async (event) => {
-      console.log("Select event fired");
-
-      try {
-        const frame = gl.xr.getFrame?.();
-        if (!frame) {
-          console.warn("XR frame not available");
-          return;
-        }
-
-        // Get the input source from the event
-        const inputSource = event.inputSource;
-        if (!inputSource) {
-          console.warn("No input source available");
-          return;
-        }
-
-        // Try to get the pose directly from the input source's target ray
-        const pose = frame.getPose(
-          inputSource.targetRaySpace,
-          frame.session.renderState.baseLayer.space
-        );
-
-        if (pose) {
-          console.log("Got pose from input source:", pose.transform.position);
-
-          // Create a new model instance at the hit position
-          const newModel = {
-            id: Date.now(),
-            position: [
-              pose.transform.position.x,
-              pose.transform.position.y - 0.5, // Adjust for floor level
-              pose.transform.position.z,
-            ],
-          };
-          console.log("Placing model at:", newModel.position);
-          setPlacedModels((prev) => [...prev, newModel]);
-        } else {
-          console.warn("Could not get pose from input source");
-        }
-      } catch (err) {
-        console.error("Error during select:", err);
-      }
-    };
-
-    session.addEventListener("select", handleSelect);
-    console.log("Select listener attached");
-
-    return () => {
-      session.removeEventListener("select", handleSelect);
-    };
-  }, [session, gl]);
+    console.log(
+      "XR state changed: isPresenting=",
+      isPresenting,
+      " session=",
+      session
+    );
+  }, [isPresenting, session]);
   // Floor mesh reference and raycaster for fallback placement
   const floorRef = useRef();
   const raycaster = useRef(new THREE.Raycaster());
-
-  // Ensure an invisible floor mesh exists in the scene (y = 0)
-  // We'll render the mesh in JSX (invisible) so raycaster can intersect it.
 
   // Handle XR select (click) events with controller-based raycasting to floor
   useEffect(() => {
@@ -85,46 +35,66 @@ export default function XRExperience() {
       console.log("Select event fired (XR)");
 
       try {
-        const frame = gl.xr.getFrame?.();
-        if (!frame) {
-          console.warn("XR frame not available");
-          return;
+        // First try: get controller transform from three.js XR controllers (safer with polyfill)
+        let origin = null;
+        let orientation = null;
+
+        // Try to find a controller with a real world transform
+        for (let i = 0; i < 2; i++) {
+          const controller = gl.xr.getController(i);
+          if (controller && controller.matrixWorld) {
+            const pos = new THREE.Vector3();
+            const quat = new THREE.Quaternion();
+            const scale = new THREE.Vector3();
+            controller.matrixWorld.decompose(pos, quat, scale);
+            // Choose controller if it has a non-zero position (user is presenting)
+            if (pos.length() > 0.0001) {
+              origin = pos;
+              orientation = quat;
+              console.log("Using controller", i, "pos", pos.toArray());
+              break;
+            }
+          }
         }
 
-        const inputSource = event.inputSource;
-        if (!inputSource) {
-          console.warn("No input source available");
-          return;
+        // Fallback: try using XRFrame.getPose if controller matrix isn't available
+        if (!origin) {
+          const frame = gl.xr.getFrame?.();
+          if (frame && event.inputSource) {
+            try {
+              const pose = frame.getPose(
+                event.inputSource.targetRaySpace,
+                frame.session.renderState?.baseLayer?.space || null
+              );
+              if (pose) {
+                origin = new THREE.Vector3(
+                  pose.transform.position.x,
+                  pose.transform.position.y,
+                  pose.transform.position.z
+                );
+                orientation = new THREE.Quaternion(
+                  pose.transform.orientation.x,
+                  pose.transform.orientation.y,
+                  pose.transform.orientation.z,
+                  pose.transform.orientation.w
+                );
+                console.log("Using frame pose as fallback", origin.toArray());
+              }
+            } catch (e) {
+              console.warn(
+                "frame.getPose failed (polyfill) - will fallback to controllers if available",
+                e
+              );
+            }
+          }
         }
 
-        // Get the controller target ray pose in the reference space
-        // Use the renderer's reference space if available; fall back to session's base reference
-        const referenceSpace =
-          gl.xr.getReferenceSpace?.() ||
-          frame.session.requestReferenceSpace?.("local");
-
-        const pose = frame.getPose(
-          inputSource.targetRaySpace,
-          referenceSpace || null
-        );
-
-        if (!pose) {
-          console.warn("Could not get input pose from controller");
+        if (!origin || !orientation) {
+          console.warn(
+            "Could not obtain controller pose from controllers or frame"
+          );
           return;
         }
-
-        // Convert pose to THREE objects
-        const origin = new THREE.Vector3(
-          pose.transform.position.x,
-          pose.transform.position.y,
-          pose.transform.position.z
-        );
-        const orientation = new THREE.Quaternion(
-          pose.transform.orientation.x,
-          pose.transform.orientation.y,
-          pose.transform.orientation.z,
-          pose.transform.orientation.w
-        );
 
         // Controller forward vector (-Z) in world space
         const forward = new THREE.Vector3(0, 0, -1)
@@ -194,11 +164,7 @@ export default function XRExperience() {
       <gridHelper args={[100, 50, "#444", "#222"]} position={[0, 0.001, 0]} />
 
       {/* Background scene */}
-      <mesh
-        geometry={nodes.baked.geometry}
-        position={[0, 0.4, 0]}
-        onClick={(event) => console.log("I've been clicked", event)}
-      >
+      <mesh geometry={nodes.baked.geometry} position={[0, 0.4, 0]}>
         <meshBasicMaterial map={bakedTexture} />
       </mesh>
       {/* Render each placed model */}
