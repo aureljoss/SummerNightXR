@@ -14,15 +14,50 @@ export default function XRExperience() {
   const bakedTexture = useTexture("./model/Lapinou.jpg");
   bakedTexture.flipY = false;
 
-  // Log XR session state for debugging (shows up in DevTools)
+  // Log XR session state for debugging (shows up in DevTools) and create overlay
   useEffect(() => {
-    console.log(
-      "XR state changed: isPresenting=",
-      isPresenting,
-      " session=",
-      session
-    );
+    const msg = `XR state changed: isPresenting=${isPresenting} session=${
+      session ? "yes" : "no"
+    }`;
+    console.log(msg, isPresenting, session);
+    let overlay = document.getElementById("xr-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "xr-overlay";
+      overlay.style.position = "fixed";
+      overlay.style.right = "10px";
+      overlay.style.top = "10px";
+      overlay.style.maxWidth = "360px";
+      overlay.style.zIndex = "99999";
+      overlay.style.fontFamily = "monospace";
+      overlay.style.fontSize = "12px";
+      overlay.style.lineHeight = "1.2";
+      overlay.style.color = "#0f0";
+      overlay.style.background = "rgba(0,0,0,0.45)";
+      overlay.style.padding = "8px";
+      overlay.style.borderRadius = "6px";
+      overlay.style.pointerEvents = "none";
+      overlay.style.whiteSpace = "pre-wrap";
+      document.body.appendChild(overlay);
+    }
+    overlay.innerText = msg;
   }, [isPresenting, session]);
+
+  // helper to write to overlay + console
+  const writeLog = (text) => {
+    try {
+      console.log(text);
+      const overlay = document.getElementById("xr-overlay");
+      if (overlay) {
+        const now = new Date().toLocaleTimeString();
+        overlay.innerText = now + " — " + text + "\n" + overlay.innerText;
+        const lines = overlay.innerText.split("\n").slice(0, 12).join("\n");
+        overlay.innerText = lines;
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  };
   // Floor mesh reference and raycaster for fallback placement
   const floorRef = useRef();
   const raycaster = useRef(new THREE.Raycaster());
@@ -35,7 +70,7 @@ export default function XRExperience() {
     if (!session) return;
 
     const handleSelect = async (event) => {
-      console.log("Select event fired (XR)");
+      writeLog("Select event fired (XR)");
 
       try {
         // First try: get controller transform from three.js XR controllers (safer with polyfill)
@@ -54,7 +89,7 @@ export default function XRExperience() {
             if (pos.length() > 0.0001) {
               origin = pos;
               orientation = quat;
-              console.log("Using controller", i, "pos", pos.toArray());
+              writeLog("Using controller " + i + " pos " + pos.toArray());
               break;
             }
           }
@@ -81,7 +116,7 @@ export default function XRExperience() {
                   pose.transform.orientation.z,
                   pose.transform.orientation.w
                 );
-                console.log("Using frame pose as fallback", origin.toArray());
+                writeLog("Using frame pose as fallback " + origin.toArray());
               }
             } catch (e) {
               console.warn(
@@ -113,7 +148,7 @@ export default function XRExperience() {
         }
 
         const intersects = raycaster.current.intersectObject(floor);
-        console.log("Raycast intersects:", intersects.length);
+        writeLog("Raycast intersects: " + intersects.length);
 
         if (intersects.length > 0) {
           const point = intersects[0].point;
@@ -121,7 +156,7 @@ export default function XRExperience() {
             id: Date.now(),
             position: [point.x, point.y, point.z],
           };
-          console.log("Placing model at floor hit:", newModel.position);
+          writeLog("Placing model at floor hit: " + newModel.position);
           setPlacedModels((prev) => [...prev, newModel]);
           // show marker at hit
           if (markerRef.current) {
@@ -141,7 +176,7 @@ export default function XRExperience() {
               fallbackPos.z,
             ],
           };
-          console.log("Fallback placing model at:", newModel.position);
+          writeLog("Fallback placing model at: " + newModel.position);
           setPlacedModels((prev) => [...prev, newModel]);
           if (markerRef.current) {
             markerRef.current.position.set(
@@ -158,7 +193,7 @@ export default function XRExperience() {
     };
 
     session.addEventListener("select", handleSelect);
-    console.log("Select listener attached");
+    writeLog("Select listener attached");
 
     return () => {
       session.removeEventListener("select", handleSelect);
