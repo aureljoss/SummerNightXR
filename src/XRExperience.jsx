@@ -2,12 +2,13 @@ import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
 import { useGLTF, useTexture } from "@react-three/drei";
-import { useXR } from "@react-three/xr";
+import { useXR,useXRPlanes } from "@react-three/xr";
 
 export default function XRExperience() {
   const [placedModels, setPlacedModels] = useState([]);
   const { isPresenting, session } = useXR();
   const { gl, camera } = useThree();
+  const wallPlanes = useXRPlanes("wall");
 
   // Load model and textures
   const { nodes } = useGLTF("./model/Lapinou.glb");
@@ -74,9 +75,13 @@ export default function XRExperience() {
   return (
     <>
       {/* Background scene */}
-        <mesh geometry={nodes.baked.geometry} position={[0,0.4,0]}>
-          <meshBasicMaterial map={bakedTexture} />
-        </mesh>
+      <mesh
+        geometry={nodes.baked.geometry}
+        position={[0, 0.4, 0]}
+        onClick={(event) => console.log("I've been clicked", event)}
+      >
+        <meshBasicMaterial map={bakedTexture} />
+      </mesh>
       {/* Render each placed model */}
       {placedModels.map((model) => (
         <group key={model.id} position={model.position}>
@@ -84,6 +89,13 @@ export default function XRExperience() {
             <meshBasicMaterial map={bakedTexture} />
           </mesh>
         </group>
+      ))}
+      {wallPlanes.map((plane) => (
+        <XRSpace space={plane.planeSpace}>
+          <XRPlaneModel plane={plane}>
+            <meshBasicMaterial color="red" />
+          </XRPlaneModel>
+        </XRSpace>
       ))}
     </>
   );
