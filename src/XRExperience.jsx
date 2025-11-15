@@ -131,10 +131,24 @@ export default function XRExperience() {
         }
 
         if (!origin || !orientation) {
-          writeLog(
-            "Could not obtain controller pose from controllers or frame"
-          );
-          return;
+          // Try camera gaze as a last-resort fallback: cast from headset camera forward
+          try {
+            const camPos = new THREE.Vector3();
+            const camQuat = new THREE.Quaternion();
+            camera.getWorldPosition(camPos);
+            camera.getWorldQuaternion(camQuat);
+            origin = camPos;
+            orientation = camQuat;
+            writeLog(
+              "Using camera gaze fallback (headset) " + camPos.toArray()
+            );
+          } catch (e) {
+            writeLog(
+              "Could not obtain controller pose from controllers or frame, and camera fallback failed: " +
+                e
+            );
+            return;
+          }
         }
 
         // Controller forward vector (-Z) in world space
