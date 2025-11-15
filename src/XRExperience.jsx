@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { useThree } from "@react-three/fiber";
+import { useThree, useFrame } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
 import { useGLTF, useTexture } from "@react-three/drei";
 import { useXR, useXRPlanes } from "@react-three/xr";
@@ -26,6 +26,9 @@ export default function XRExperience() {
   // Floor mesh reference and raycaster for fallback placement
   const floorRef = useRef();
   const raycaster = useRef(new THREE.Raycaster());
+  // Debug helpers: controller forward line and intersection marker
+  const controllerLineRef = useRef();
+  const markerRef = useRef();
 
   // Handle XR select (click) events with controller-based raycasting to floor
   useEffect(() => {
@@ -120,6 +123,11 @@ export default function XRExperience() {
           };
           console.log("Placing model at floor hit:", newModel.position);
           setPlacedModels((prev) => [...prev, newModel]);
+          // show marker at hit
+          if (markerRef.current) {
+            markerRef.current.position.copy(point);
+            markerRef.current.visible = true;
+          }
         } else {
           // As a fallback, place a bit ahead of controller if no floor hit
           const fallbackPos = origin
@@ -135,6 +143,14 @@ export default function XRExperience() {
           };
           console.log("Fallback placing model at:", newModel.position);
           setPlacedModels((prev) => [...prev, newModel]);
+          if (markerRef.current) {
+            markerRef.current.position.set(
+              newModel.position[0],
+              newModel.position[1],
+              newModel.position[2]
+            );
+            markerRef.current.visible = true;
+          }
         }
       } catch (err) {
         console.error("Error during select:", err);
@@ -149,6 +165,35 @@ export default function XRExperience() {
     };
   }, [session, gl]);
 
+  // Update controller debug line each frame
+  useFrame(() => {
+    const line = controllerLineRef.current;
+    if (!line) return;
+
+    // Prefer controller 0 then 1
+    const controller = gl.xr.getController(0) || gl.xr.getController(1);
+    if (!controller || !controller.matrixWorld) {
+      line.visible = false;
+      return;
+    }
+
+    // Decompose controller world matrix
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    controller.matrixWorld.decompose(pos, quat, scale);
+
+    const forward = new THREE.Vector3(0, 0, -1)
+      .applyQuaternion(quat)
+      .normalize();
+    const end = pos.clone().add(forward.multiplyScalar(3));
+
+    // Update geometry points
+    const pts = [pos, end];
+    line.geometry.setFromPoints(pts);
+    line.visible = true;
+  });
+
   return (
     <>
       {/* Visual floor grid for debugging (faint) and a transparent plane for raycasting */}
@@ -162,6 +207,17 @@ export default function XRExperience() {
         <meshBasicMaterial color="#888" transparent opacity={0.12} />
       </mesh>
       <gridHelper args={[100, 50, "#444", "#222"]} position={[0, 0.001, 0]} />
+
+      {/* Controller forward line helper */}
+      <line ref={controllerLineRef} visible={false}>
+        <bufferGeometry />
+        <lineBasicMaterial color="yellow" />
+      </line>
+      {/* Intersection marker (small red sphere) */}
+      <mesh ref={markerRef} visible={false} position={[0, 0, 0]}>
+        <sphereGeometry args={[0.06, 12, 12]} />
+        <meshBasicMaterial color="red" />
+      </mesh>
 
       {/* Background scene */}
       <mesh geometry={nodes.baked.geometry} position={[0, 0.4, 0]}>
