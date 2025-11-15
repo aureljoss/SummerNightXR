@@ -98,6 +98,9 @@ export default function XRExperience() {
         // Fallback: try using XRFrame.getPose if controller matrix isn't available
         if (!origin) {
           const frame = gl.xr.getFrame?.();
+          if (!frame) {
+            writeLog("XR frame not available (fallback)");
+          }
           if (frame && event.inputSource) {
             try {
               const pose = frame.getPose(
@@ -119,18 +122,15 @@ export default function XRExperience() {
                 writeLog("Using frame pose as fallback " + origin.toArray());
               }
             } catch (e) {
-              console.warn(
-                "frame.getPose failed (polyfill) - will fallback to controllers if available",
-                e
+              writeLog(
+                "frame.getPose failed (polyfill) - will fallback to controllers if available: " + e
               );
             }
           }
         }
 
         if (!origin || !orientation) {
-          console.warn(
-            "Could not obtain controller pose from controllers or frame"
-          );
+          writeLog("Could not obtain controller pose from controllers or frame");
           return;
         }
 
@@ -143,7 +143,7 @@ export default function XRExperience() {
         raycaster.current.set(origin, forward);
         const floor = floorRef.current;
         if (!floor) {
-          console.warn("Floor mesh not available for raycast");
+          writeLog("Floor mesh not available for raycast");
           return;
         }
 
@@ -188,7 +188,7 @@ export default function XRExperience() {
           }
         }
       } catch (err) {
-        console.error("Error during select:", err);
+        writeLog("Error during select: " + err);
       }
     };
 
