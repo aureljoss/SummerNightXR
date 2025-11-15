@@ -3,11 +3,7 @@ import ReactDOM from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
 import Experience from "./Experience.jsx";
 import XRExperience from "./XRExperience.jsx";
-import {
-  createXRStore,
-  XR,
-  XROrigin,
-} from "@react-three/xr";
+import { createXRStore, XR, XROrigin } from "@react-three/xr";
 
 const store = createXRStore();
 
@@ -27,9 +23,10 @@ root.render(
       }}
     >
       <XR store={store}>
-        <XRExperience />
-        <Experience />
-        <XROrigin position={[0.4, 0, 0]} />
+        <XROrigin position={[0.4, 0, 0]}>
+          <XRExperience />
+          <Experience />
+        </XROrigin>
       </XR>
     </Canvas>
   </>
