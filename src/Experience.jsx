@@ -104,7 +104,7 @@ export default function Experience() {
 
       <OrbitControls makeDefault />
       <Center>
-        <mesh geometry={nodes.baked.geometry} position={nodes.baked.position}>
+        {/* <mesh geometry={nodes.baked.geometry} position={nodes.baked.position}>
           <meshBasicMaterial map={bakedTexture} />
         </mesh>
         <mesh
@@ -118,7 +118,7 @@ export default function Experience() {
           position={nodes.poleLightB.position}
         >
           <meshBasicMaterial color="#ffffe5" />
-        </mesh>
+        </mesh> */}
         <mesh
           geometry={nodes.portalLight.geometry}
           position={nodes.portalLight.position}
