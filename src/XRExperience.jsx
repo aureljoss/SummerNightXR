@@ -1,84 +1,65 @@
 import * as THREE from "three";
-import { useThree, useFrame } from "@react-three/fiber";
+import { useThree } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
 import { useGLTF, useTexture } from "@react-three/drei";
 import { useXR } from "@react-three/xr";
 
 export default function XRExperience() {
   const [placedModels, setPlacedModels] = useState([]);
-  const hitTestSourceRef = useRef(null);
   const { isPresenting, session } = useXR();
-  const { gl } = useThree();
+  const { gl, camera } = useThree();
 
   // Load model and textures
   const { nodes } = useGLTF("./model/Lapinou.glb");
   const bakedTexture = useTexture("./model/Lapinou.jpg");
   bakedTexture.flipY = false;
 
-  // Initialize hit test source when XR session starts
+  // Handle XR select (click) events with simple controller pose
   useEffect(() => {
     if (!session) return;
 
-    const initHitTest = async () => {
-      try {
-        // For AR, we need to request hit test results with a plane
-        const hitTestSource = await session.requestHitTestSource({
-          space: session.inputSpace,
-          entityTypes: ["plane"],
-          offsetRay: new XRRay({ y: 0.5 }),
-        });
-        hitTestSourceRef.current = hitTestSource;
-        console.log("Hit test source initialized:", hitTestSource);
-      } catch (err) {
-        console.error("Hit test setup failed:", err);
-      }
-    };
-
-    initHitTest();
-  }, [session]);
-
-  // Handle XR select (click) events
-  useEffect(() => {
-    if (!session) return;
-
-    const handleSelect = (event) => {
+    const handleSelect = async (event) => {
       console.log("Select event fired");
 
-      if (!hitTestSourceRef.current) {
-        console.warn("Hit test source not initialized");
-        return;
-      }
+      try {
+        const frame = gl.xr.getFrame?.();
+        if (!frame) {
+          console.warn("XR frame not available");
+          return;
+        }
 
-      // Get the XR frame from the renderer
-      const frame = gl.xr.getFrame?.();
-      if (!frame) {
-        console.warn("XR frame not available");
-        return;
-      }
+        // Get the input source from the event
+        const inputSource = event.inputSource;
+        if (!inputSource) {
+          console.warn("No input source available");
+          return;
+        }
 
-      const hitTestResults = frame.getHitTestResults(hitTestSourceRef.current);
-      console.log("Hit test results:", hitTestResults.length);
-
-      if (hitTestResults.length > 0) {
-        // Get the pose of the first hit test result
-        const pose = hitTestResults[0].getPose(
+        // Try to get the pose directly from the input source's target ray
+        const pose = frame.getPose(
+          inputSource.targetRaySpace,
           frame.session.renderState.baseLayer.space
         );
-        console.log("Hit pose:", pose);
 
         if (pose) {
+          console.log("Got pose from input source:", pose.transform.position);
+
           // Create a new model instance at the hit position
           const newModel = {
             id: Date.now(),
             position: [
               pose.transform.position.x,
-              pose.transform.position.y,
+              pose.transform.position.y - 0.5, // Adjust for floor level
               pose.transform.position.z,
             ],
           };
           console.log("Placing model at:", newModel.position);
           setPlacedModels((prev) => [...prev, newModel]);
+        } else {
+          console.warn("Could not get pose from input source");
         }
+      } catch (err) {
+        console.error("Error during select:", err);
       }
     };
 
