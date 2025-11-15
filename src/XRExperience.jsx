@@ -7,6 +7,7 @@ import { useXR } from "@react-three/xr";
 export default function XRExperience() {
   const [placedModels, setPlacedModels] = useState([]);
   const hitTestSourceRef = useRef(null);
+  const frameRef = useRef();
   const { isPresenting, session } = useXR();
 
   // Load model and textures
@@ -19,54 +20,79 @@ export default function XRExperience() {
     if (!session) return;
 
     const initHitTest = async () => {
-      // Request a hit test source for screen input (controller)
-      const hitTestSource = await session.requestHitTestSource({
-        space: session.inputSpace,
-      });
-      hitTestSourceRef.current = hitTestSource;
+      try {
+        // For AR, we need to request hit test results with a plane
+        const hitTestSource = await session.requestHitTestSource({
+          space: session.inputSpace,
+          entityTypes: ["plane"],
+          offsetRay: new XRRay({ y: 0.5 }),
+        });
+        hitTestSourceRef.current = hitTestSource;
+        console.log("Hit test source initialized:", hitTestSource);
+      } catch (err) {
+        console.error("Hit test setup failed:", err);
+      }
     };
 
-    initHitTest().catch((err) => console.error("Hit test setup failed:", err));
+    initHitTest();
   }, [session]);
 
   // Handle XR select (click) events
   useEffect(() => {
-    if (!session || !hitTestSourceRef.current) return;
+    if (!session) return;
 
     const handleSelect = (event) => {
-      // Get hit test results from the session
-      const hitTestResults = session.requestHitTestResults(
-        hitTestSourceRef.current,
-        session.renderState.baseLayer.space
-      );
+      console.log("Select event fired");
 
-      if (hitTestResults.length > 0) {
-        // Get the pose of the first hit test result (closest intersection)
-        const pose = hitTestResults[0].getPose(
-          session.renderState.baseLayer.space
+      if (!hitTestSourceRef.current) {
+        console.warn("Hit test source not initialized");
+        return;
+      }
+
+      // Get the frame to access hit test results
+      if (frameRef.current) {
+        const hitTestResults = frameRef.current.getHitTestResults(
+          hitTestSourceRef.current
         );
+        console.log("Hit test results:", hitTestResults.length);
 
-        if (pose) {
-          // Create a new model instance at the hit position
-          const newModel = {
-            id: Date.now(),
-            position: [
-              pose.transform.position.x,
-              pose.transform.position.y,
-              pose.transform.position.z,
-            ],
-          };
-          setPlacedModels((prev) => [...prev, newModel]);
+        if (hitTestResults.length > 0) {
+          // Get the pose of the first hit test result
+          const pose = hitTestResults[0].getPose(
+            frameRef.current.session.renderState.baseLayer.space
+          );
+          console.log("Hit pose:", pose);
+
+          if (pose) {
+            // Create a new model instance at the hit position
+            const newModel = {
+              id: Date.now(),
+              position: [
+                pose.transform.position.x,
+                pose.transform.position.y,
+                pose.transform.position.z,
+              ],
+            };
+            console.log("Placing model at:", newModel.position);
+            setPlacedModels((prev) => [...prev, newModel]);
+          }
         }
       }
     };
 
     session.addEventListener("select", handleSelect);
+    console.log("Select listener attached");
 
     return () => {
       session.removeEventListener("select", handleSelect);
     };
   }, [session]);
+
+  // Capture the current frame in useFrame
+  const { frame } = useFrame();
+  useEffect(() => {
+    frameRef.current = frame;
+  }, [frame]);
 
   return (
     <>
