@@ -123,14 +123,17 @@ export default function XRExperience() {
               }
             } catch (e) {
               writeLog(
-                "frame.getPose failed (polyfill) - will fallback to controllers if available: " + e
+                "frame.getPose failed (polyfill) - will fallback to controllers if available: " +
+                  e
               );
             }
           }
         }
 
         if (!origin || !orientation) {
-          writeLog("Could not obtain controller pose from controllers or frame");
+          writeLog(
+            "Could not obtain controller pose from controllers or frame"
+          );
           return;
         }
 
